@@ -21,19 +21,19 @@ Features:
 
 
 ```bash
-uv add git+https://github.com/yourname/gp-oracle.git
+uv add git+https://github.com/jettscythe/gp-oracle.git
 ```
 
 or 
 
 ```bash
-pip install git+https://github.com/yourname/gp-oracle.git
+pip install git+https://github.com/jettscythe/gp-oracle.git
 ```
 
 ### Development
 
 ```bash
-git clone https://github.com/YOURNAME/gp-oracle.git
+git clone https://github.com/jettscythe/gp-oracle.git
 cd gp-oracle
 
 uv sync
