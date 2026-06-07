@@ -1,12 +1,13 @@
 """Client for the General Protocols / oracles.cash REST API."""
 
 from __future__ import annotations
+from .schnorr import verify_message_signature
 from typing import Any
 
 import httpx
-from .constants import DEFAULT_BASE_URL, OracleId
-from .models import OracleMessage
-from .parser import parse_price_message
+from anyhedge.oracle import Pricepoint, PublicKey
+
+DEFAULT_BASE_URL = "https://oracles.generalprotocols.com"
 
 
 class OracleClient:
@@ -23,7 +24,7 @@ class OracleClient:
 
     def get_oracle_messages(
         self,
-        public_key: str | OracleId | None = None,
+        public_key: PublicKey | None = None,
         *,
         count: int | None = None,
         min_message_timestamp: int | None = None,
@@ -54,7 +55,7 @@ class OracleClient:
 
     def get_oracle_metadata(
         self,
-        public_key: str | OracleId | None = None,
+        public_key: PublicKey | None = None,
         *,
         max_message_sequence: int | None = None,
         count: int | None = None,
@@ -81,7 +82,7 @@ class OracleClient:
     # --- Price visualization ---
     def get_price_graph_points(
         self,
-        public_key: str | OracleId | None = None,
+        public_key: PublicKey | None = None,
         *,
         min_message_timestamp: int,
         max_message_timestamp: int,
@@ -104,7 +105,7 @@ class OracleClient:
         return r.text  # SVG
 
     # --- Misc ---
-    def get_recovery_progress(self, public_key: str | OracleId) -> dict[str, Any]:
+    def get_recovery_progress(self, public_key: PublicKey) -> dict[str, Any]:
         r = self._client.get(
             "/api/v1/recoveryProgress", params={"publicKey": public_key}
         )
@@ -124,8 +125,8 @@ class OracleClient:
 
     def latest_message(
         self,
-        public_key: str | OracleId,
-    ) -> OracleMessage:
+        public_key: PublicKey,
+    ) -> Pricepoint:
         r = self._client.get(
             "/api/v1/oracleMessages",
             params={
@@ -133,22 +134,15 @@ class OracleClient:
                 "count": 1,
             },
         )
-
         r.raise_for_status()
-
         msg = r.json()["oracleMessages"][0]
-
-        return OracleMessage(
+        pp = Pricepoint(
+            oracle_pubkey=PublicKey(msg["publicKey"]),
             message=msg["message"],
             signature=msg["signature"],
-            public_key=msg["publicKey"],
         )
-
-    def latest_price(
-        self,
-        public_key: str | OracleId,
-    ):
-        return parse_price_message(self.latest_message(public_key).message)
+        assert verify_message_signature(pp.message, pp.signature, public_key)
+        return pp
 
     def close(self) -> None:
         self._client.close()
